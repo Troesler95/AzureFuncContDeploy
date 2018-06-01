@@ -1,32 +1,82 @@
-"use strict";
-var builder = require("botbuilder");
-var botbuilder_azure = require("botbuilder-azure");
-var path = require('path');
+/*-----------------------------------------------------------------------------
+A simple OAuthCard bot for the Microsoft Bot Framework. 
+-----------------------------------------------------------------------------*/
 
-var useEmulator = (process.env.NODE_ENV == 'development');
+var restify = require('restify');
+var builder = require('botbuilder');
+// var https = require('https');
 
-var connector = useEmulator ? new builder.ChatConnector() : new botbuilder_azure.BotServiceConnector({
-    appId: process.env['MicrosoftAppId'],
-    appPassword: process.env['MicrosoftAppPassword'],
-    openIdMetadata: process.env['BotOpenIdMetadata']
+// Graph API SDK for Node
+var MicrosoftGraph = require("@microsoft/microsoft-graph-client");
+
+// Setup Restify Server
+var server = restify.createServer();
+server.listen(process.env.port || process.env.PORT || 4000, function () {
+   console.log('%s listening to %s', server.name, server.url); 
 });
 
-// AAD Connection for this bot
-var connectionName = process.env.CONNECTION_NAME || "NodeOAuthNGraphAAD";
-
-/*----------------------------------------------------------------------------------------
-* Bot Storage: This is a great spot to register the private state storage for your bot. 
-* We provide adapters for Azure Table, CosmosDb, SQL Azure, or you can implement your own!
-* For samples and documentation, see: https://github.com/Microsoft/BotBuilder-Azure
-* ---------------------------------------------------------------------------------------- */
-
-//var tableName = 'botdata';
-//var azureTableClient = new botbuilder_azure.AzureTableClient(tableName, process.env['AzureWebJobsStorage']);
-//var tableStorage = new botbuilder_azure.AzureBotStorage({ gzipData: false }, azureTableClient);
-
-// for testing purposes exclusively. This should never be used in production!
+// setting up internal storage. Do not use in-proc storage for production!!!
 var inMemoryStorage = new builder.MemoryBotStorage();
 
+// Create chat connector for communicating with the Bot Framework Service
+var connector = new builder.ChatConnector({
+    appId: process.env["MicrosoftAppId"] || "",
+    appPassword: process.env["MicrosoftAppPassword"] || ""
+});
+
+var connectionName = process.env.CONNECTION_NAME || "NodeOAuthNGraphAAD";
+var userEmail;
+
+// Listen for messages from users 
+server.post('/api/messages', connector.listen());
+
+// container for MS graph client
+var client;
+
+// Unable to get this working properly, however this should be on the right track
+//
+// Since we are using Node, however, I think the SDK is probably the easiest way to go!
+/*function getEmailFromGraph(token, callback) {
+    console.log("making get request to Graph API");
+    const options = {
+        method: 'GET',
+        Authorization: 'Bearer ' + token,
+        url: "https://graph.microsoft.com/v1.0/me/",
+        hostname: "graph.microsoft.com"
+    }
+
+    // See https://davidwalsh.name/nodejs-http-request
+    var req = https.request(options, function(response) {
+        response.setEncoding('utf8');
+        var body = '';
+
+        response.on('data', function(data) {
+            body += data;
+        });
+
+        response.on('end', function() {
+            try {
+                //var parsed = JSON.parse(body);
+                console.log("response: ", body);
+            } catch(e) {
+                console.log("Unable to parse request response: ", );
+                callback(e);
+            }
+            callback(body);
+        })
+    })
+    
+    req.on('error', function(err) {
+        console.log("HTTP GET error: " + err.message);
+        callback(err);
+    });
+
+    // send request
+    req.end();
+    console.log("request sent.");
+};*/
+
+// Create your bot with a function to receive messages from the user
 var bot = new builder.UniversalBot(connector, function (session) {
     if (session.message.text == 'signout') {
         // It is important to have a SignOut intent
@@ -41,21 +91,59 @@ var bot = new builder.UniversalBot(connector, function (session) {
         // First check whether the Azure Bot Service already has a token for this user
         connector.getUserToken(session.message.address, connectionName, undefined, (err, result) => {
             if (result) {
-                // If there is already a token, the bot can use it directly
-                session.send('You are already signed in with token: ' + result.token);
+                // init Graph client with AAD token
+                client = MicrosoftGraph.Client.init({
+                    authProvider: function(done) {
+                        done(null, result.token); // token we've gotten from AAD v2
+                    }
+                });
+
+                // Request from the graph the users email
+                // after the promise resolves (then()), send the message to the user
+                //
+                // See https://github.com/microsoftgraph/msgraph-sdk-javascript for usage details
+                client.api('https://graph.microsoft.com/v1.0/me') // I wasn't able to successfully use just 'me', but the full URL works just fine!
+                .select("mail") // specifically selects the mail category from the information returned
+                .get() // execute get request
+                .then(function(res) {
+                    console.log("Response: ", res); // debugging purposes
+                                                    // used to see what the response looks like (it's a JavaScript object)
+                    userEmail = res["mail"];
+
+                    session.send('You are already signed in with token: ' + result.token + '\n\n'
+                            + 'Your email is: ' + userEmail);
+                }).catch(function(err) {
+                    console.log("Graph API GET Error: ", err);
+                    session.send('Uh oh! It looks like I can\'t communicate with the graph right now');
+                });
+                /*getEmailFromGraph(result.token, function(res) {
+                    session.send('You are already signed in with token: ' + result.token + '\n\n'
+                            + 'Your email is: ' + userEmail);
+                });*/
             } else {
                 // If there not is already a token, the bot can send an OAuthCard to have the user log in
                 if (!session.userData.activeSignIn) {
                     session.send("Hello! Let's get you signed in!");
-                    builder.OAuthCard.create(connector, session, connectionName, "Please sign in", "Sign in", (createSignInErr, signInMessage) =>
-                    {
-                        if (signInMessage) {
-                            session.send(signInMessage);
-                            session.userData.activeSignIn = true;
-                        } else {
-                            session.send("Something went wrong trying to sign you in.");
-                        }     
-                    });
+                    // builder.OAuthCard.create(connector, session, connectionName, "Please sign in", "Sign in", (createSignInErr, signInMessage) =>
+                    // {
+                    //     if (signInMessage) {
+                    //         session.send(signInMessage);
+                    //         session.userData.activeSignIn = true;
+                    //     } else {
+                    //         session.send("Something went wrong trying to sign you in.");
+                    //     }     
+                    // });
+                    var signinCard = new builder.SigninCard(session);
+                    signinCard.text("Please sign in").button("Sign in", "https://microsoft.com/")
+
+                    var msg = new builder.Message(session);
+                    msg.attachmentLayout(builder.AttachmentLayout.list);
+                    msg.attachments([
+                        new builder.Message(session).text("Please sign in"),
+                        signinCard.toAttachment()
+                    ])
+                    session.send(msg);
+                    session.userData.activeSignIn = true;
                 } else {
                     // Some clients require a 6 digit code validation so we can check that here
                     session.send("Let's see if that code works...");
@@ -71,31 +159,32 @@ var bot = new builder.UniversalBot(connector, function (session) {
             }
         });
     }
-}).on("event", (event) => {         // Handle 'event' activities
+})
+.set('storage', inMemoryStorage) // Register in memory storage
+.on("event", (event) => {         // Handle 'event' activities
     if (event.name == 'tokens/response') {
         // received a TokenResponse, which is how the Azure Bot Service responds with the user token after an OAuthCard
         bot.loadSession(event.address, (err, session) => {
-            let tokenResponse = event.value;
+            var tokenResponse = event.value;
             session.send('You are now signed in with token: ' + tokenResponse.token);
             session.userData.activeSignIn = false;
         });
     }
 });
 
-bot.localePath(path.join(__dirname, './locale'));
-bot.set('storage', inMemoryStorage);
-
-/*bot.dialog('/', function (session) {
-    session.send('You said ' + session.message.text);
-});*/
-
-if (useEmulator) {
-    var restify = require('restify');
-    var server = restify.createServer();
-    server.listen(3978, function() {
-        console.log('test bot endpont at http://localhost:3978/api/messages');
-    });
-    server.post('/api/messages', connector.listen());    
-} else {
-    module.exports = connector.listen();
-}
+connector.onInvoke((event, cb) => {
+    if (event.name == 'signin/verifyState') {
+        // received a MS Team's code verification Invoke Activity
+        bot.loadSession(event.address, (err, session) => {
+            var verificationCode = event.value.state;
+            // Get the user token using the verification code sent by MS Teams
+            connector.getUserToken(session.message.address, connectionName, verificationCode, (err, result) => {
+                session.send('You are now signed in with token: ' + result.token);
+                session.userData.activeSignIn = false;
+                cb(undefined, {}, 200);
+            });
+        });
+    } else {
+        cb(undefined, {}, 200);
+    }
+});

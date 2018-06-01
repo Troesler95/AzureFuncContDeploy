@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
+    "@microsoft/microsoft-graph-client": "^1.0.0",
     "botbuilder": "^3.13.1",
     "botbuilder-azure": "^3.0.4"
   },
