@@ -85,9 +85,9 @@ var bot = new builder.UniversalBot(connector, function (session) {
 bot.localePath(path.join(__dirname, './locale'));
 bot.set('storage', inMemoryStorage);
 
-bot.dialog('/', function (session) {
+/*bot.dialog('/', function (session) {
     session.send('You said ' + session.message.text);
-});
+});*/
 
 if (useEmulator) {
     var restify = require('restify');
