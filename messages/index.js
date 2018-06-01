@@ -2,18 +2,14 @@
 A simple OAuthCard bot for the Microsoft Bot Framework. 
 -----------------------------------------------------------------------------*/
 
-var restify = require('restify');
 var builder = require('botbuilder');
+var botbuilder_azure = require("botbuilder-azure");
 // var https = require('https');
 
 // Graph API SDK for Node
 var MicrosoftGraph = require("@microsoft/microsoft-graph-client");
 
-// Setup Restify Server
-var server = restify.createServer();
-server.listen(process.env.port || process.env.PORT || 4000, function () {
-   console.log('%s listening to %s', server.name, server.url); 
-});
+var useEmulator = (process.env.NODE_ENV == 'development');
 
 // setting up internal storage. Do not use in-proc storage for production!!!
 var inMemoryStorage = new builder.MemoryBotStorage();
@@ -21,14 +17,12 @@ var inMemoryStorage = new builder.MemoryBotStorage();
 // Create chat connector for communicating with the Bot Framework Service
 var connector = new builder.ChatConnector({
     appId: process.env["MicrosoftAppId"] || "",
-    appPassword: process.env["MicrosoftAppPassword"] || ""
+    appPassword: process.env["MicrosoftAppPassword"] || "",
+    openIdMetadata: process.env['BotOpenIdMetadata']
 });
 
 var connectionName = process.env.CONNECTION_NAME || "NodeOAuthNGraphAAD";
 var userEmail;
-
-// Listen for messages from users 
-server.post('/api/messages', connector.listen());
 
 // container for MS graph client
 var client;
@@ -188,3 +182,16 @@ connector.onInvoke((event, cb) => {
         cb(undefined, {}, 200);
     }
 });
+
+if(useEmulator) {
+    var restify = require('restify');
+    // Setup Restify Server
+    var server = restify.createServer();
+    server.listen(process.env.port || process.env.PORT || 4000, function () {
+        console.log('%s listening to %s', server.name, server.url); 
+    });
+    // Listen for messages from users 
+    server.post('/api/messages', connector.listen());
+} else {
+    module.exports = connector.listen()
+}
