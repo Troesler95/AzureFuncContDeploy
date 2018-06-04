@@ -3,21 +3,21 @@ A simple OAuthCard bot for the Microsoft Bot Framework.
 -----------------------------------------------------------------------------*/
 
 var builder = require('botbuilder');
-var botbuilder_azure = require("botbuilder-azure");
+// var botbuilder_azure = require("botbuilder-azure");
 // var https = require('https');
 
 // Graph API SDK for Node
 var MicrosoftGraph = require("@microsoft/microsoft-graph-client");
 
-var useEmulator = (process.env.NODE_ENV == 'development');
-
+// var useEmulator = (process.env.NODE_ENV == 'development');
+var useEmulator = false;
 // setting up internal storage. Do not use in-proc storage for production!!!
 var inMemoryStorage = new builder.MemoryBotStorage();
 
 // Create chat connector for communicating with the Bot Framework Service
 var connector = new builder.ChatConnector({
-    appId: process.env["MicrosoftAppId"] || "",
-    appPassword: process.env["MicrosoftAppPassword"] || "",
+    appId: process.env["MicrosoftAppId"] || "fe8957be-3ae8-4c39-969c-00eadd544339",
+    appPassword: process.env["MicrosoftAppPassword"] || "viprqAB_ssEADWS04910:^[",
     openIdMetadata: process.env['BotOpenIdMetadata']
 });
 
@@ -118,26 +118,15 @@ var bot = new builder.UniversalBot(connector, function (session) {
                 // If there not is already a token, the bot can send an OAuthCard to have the user log in
                 if (!session.userData.activeSignIn) {
                     session.send("Hello! Let's get you signed in!");
-                    // builder.OAuthCard.create(connector, session, connectionName, "Please sign in", "Sign in", (createSignInErr, signInMessage) =>
-                    // {
-                    //     if (signInMessage) {
-                    //         session.send(signInMessage);
-                    //         session.userData.activeSignIn = true;
-                    //     } else {
-                    //         session.send("Something went wrong trying to sign you in.");
-                    //     }     
-                    // });
-                    var signinCard = new builder.SigninCard(session);
-                    signinCard.text("Please sign in").button("Sign in", "https://microsoft.com/")
-
-                    var msg = new builder.Message(session);
-                    msg.attachmentLayout(builder.AttachmentLayout.list);
-                    msg.attachments([
-                        new builder.Message(session).text("Please sign in"),
-                        signinCard.toAttachment()
-                    ])
-                    session.send(msg);
-                    session.userData.activeSignIn = true;
+                    builder.OAuthCard.create(connector, session, connectionName, "Please sign in", "Sign in", (createSignInErr, signInMessage) =>
+                    {
+                        if (signInMessage) {
+                            session.send(signInMessage);
+                            session.userData.activeSignIn = true;
+                        } else {
+                            session.send("Something went wrong trying to sign you in.");
+                        }     
+                    });
                 } else {
                     // Some clients require a 6 digit code validation so we can check that here
                     session.send("Let's see if that code works...");
@@ -183,6 +172,7 @@ connector.onInvoke((event, cb) => {
     }
 });
 
+console.log("Before if else")
 if(useEmulator) {
     var restify = require('restify');
     // Setup Restify Server
