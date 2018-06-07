@@ -10,7 +10,7 @@ var builder = require('botbuilder');
 // var MicrosoftGraph = require("@microsoft/microsoft-graph-client");
 
 var useEmulator = (process.env.NODE_ENV == 'development');
-var useEmulator = true;
+var useEmulator = false;
 // setting up internal storage. Do not use in-proc storage for production!!!
 var inMemoryStorage = new builder.MemoryBotStorage();
 
