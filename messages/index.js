@@ -7,10 +7,10 @@ var builder = require('botbuilder');
 // var https = require('https');
 
 // Graph API SDK for Node
-var MicrosoftGraph = require("@microsoft/microsoft-graph-client");
+// var MicrosoftGraph = require("@microsoft/microsoft-graph-client");
 
-// var useEmulator = (process.env.NODE_ENV == 'development');
-var useEmulator = false;
+var useEmulator = (process.env.NODE_ENV == 'development');
+var useEmulator = true;
 // setting up internal storage. Do not use in-proc storage for production!!!
 var inMemoryStorage = new builder.MemoryBotStorage();
 
@@ -86,34 +86,32 @@ var bot = new builder.UniversalBot(connector, function (session) {
         connector.getUserToken(session.message.address, connectionName, undefined, (err, result) => {
             if (result) {
                 // init Graph client with AAD token
-                client = MicrosoftGraph.Client.init({
-                    authProvider: function(done) {
-                        done(null, result.token); // token we've gotten from AAD v2
-                    }
-                });
+                // client = MicrosoftGraph.Client.init({
+                //     authProvider: function(done) {
+                //         done(null, result.token); // token we've gotten from AAD v2
+                //     }
+                // });
 
                 // Request from the graph the users email
                 // after the promise resolves (then()), send the message to the user
                 //
                 // See https://github.com/microsoftgraph/msgraph-sdk-javascript for usage details
-                client.api('https://graph.microsoft.com/v1.0/me') // I wasn't able to successfully use just 'me', but the full URL works just fine!
-                .select("mail") // specifically selects the mail category from the information returned
-                .get() // execute get request
-                .then(function(res) {
-                    console.log("Response: ", res); // debugging purposes
-                                                    // used to see what the response looks like (it's a JavaScript object)
-                    userEmail = res["mail"];
+                // client.api('https://graph.microsoft.com/v1.0/me') // I wasn't able to successfully use just 'me', but the full URL works just fine!
+                // .select("mail") // specifically selects the mail category from the information returned
+                // .get() // execute get request
+                // .then(function(res) {
+                //     console.log("Response: ", res); // debugging purposes
+                //                                     // used to see what the response looks like (it's a JavaScript object)
+                //     userEmail = res["mail"];
 
-                    session.send('You are already signed in with token: ' + result.token + '\n\n'
-                            + 'Your email is: ' + userEmail);
-                }).catch(function(err) {
-                    console.log("Graph API GET Error: ", err);
-                    session.send('Uh oh! It looks like I can\'t communicate with the graph right now');
-                });
-                /*getEmailFromGraph(result.token, function(res) {
-                    session.send('You are already signed in with token: ' + result.token + '\n\n'
-                            + 'Your email is: ' + userEmail);
-                });*/
+                //     session.send('You are already signed in with token: ' + result.token + '\n\n'
+                //             + 'Your email is: ' + userEmail);
+                // }).catch(function(err) {
+                //     console.log("Graph API GET Error: ", err);
+                //     session.send('Uh oh! It looks like I can\'t communicate with the graph right now');
+                // });
+
+                session.send('You are already signed in with token: ' + result.token);
             } else {
                 // If there not is already a token, the bot can send an OAuthCard to have the user log in
                 if (!session.userData.activeSignIn) {
@@ -172,7 +170,6 @@ connector.onInvoke((event, cb) => {
     }
 });
 
-console.log("Before if else")
 if(useEmulator) {
     var restify = require('restify');
     // Setup Restify Server
