@@ -3,7 +3,7 @@ A simple OAuthCard bot for the Microsoft Bot Framework.
 -----------------------------------------------------------------------------*/
 
 var builder = require('botbuilder');
-// var botbuilder_azure = require("botbuilder-azure");
+var botbuilder_azure = require("botbuilder-azure");
 // var https = require('https');
 
 // Graph API SDK for Node
@@ -15,7 +15,7 @@ var useEmulator = false;
 var inMemoryStorage = new builder.MemoryBotStorage();
 
 // Create chat connector for communicating with the Bot Framework Service
-var connector = new builder.ChatConnector({
+var connector = useEmulator ? new builder.ChatConnector() : new botbuilder_azure.BotServiceConnector({
     appId: process.env["MicrosoftAppId"] || "", // <-- App id from Application Settings
     appPassword: process.env["MicrosoftAppPassword"] || "", // <-- Secret from Application Settings
     openIdMetadata: process.env['BotOpenIdMetadata']
@@ -26,49 +26,6 @@ var userEmail;
 
 // container for MS graph client
 var client;
-
-// Unable to get this working properly, however this should be on the right track
-//
-// Since we are using Node, however, I think the SDK is probably the easiest way to go!
-/*function getEmailFromGraph(token, callback) {
-    console.log("making get request to Graph API");
-    const options = {
-        method: 'GET',
-        Authorization: 'Bearer ' + token,
-        url: "https://graph.microsoft.com/v1.0/me/",
-        hostname: "graph.microsoft.com"
-    }
-
-    // See https://davidwalsh.name/nodejs-http-request
-    var req = https.request(options, function(response) {
-        response.setEncoding('utf8');
-        var body = '';
-
-        response.on('data', function(data) {
-            body += data;
-        });
-
-        response.on('end', function() {
-            try {
-                //var parsed = JSON.parse(body);
-                console.log("response: ", body);
-            } catch(e) {
-                console.log("Unable to parse request response: ", );
-                callback(e);
-            }
-            callback(body);
-        })
-    })
-    
-    req.on('error', function(err) {
-        console.log("HTTP GET error: " + err.message);
-        callback(err);
-    });
-
-    // send request
-    req.end();
-    console.log("request sent.");
-};*/
 
 // Create your bot with a function to receive messages from the user
 var bot = new builder.UniversalBot(connector, function (session) {
