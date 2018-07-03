@@ -4,13 +4,12 @@ A simple OAuthCard bot for the Microsoft Bot Framework.
 
 var builder = require('botbuilder');
 var botbuilder_azure = require("botbuilder-azure");
-var crypto = require('crypto');
 
 // Graph API SDK for Node
 var MicrosoftGraph = require("@microsoft/microsoft-graph-client");
 
 var useEmulator = (process.env.NODE_ENV == 'development');
-var useEmulator = false;
+var useEmulator = true;
 // setting up internal storage. Do not use in-proc storage for production!!!
 var inMemoryStorage = new builder.MemoryBotStorage();
 
@@ -132,7 +131,7 @@ connector.onInvoke((event, cb) => {
 });
 
 if(useEmulator) {
-    var restify = require('restify');
+    // var restify = require('restify');
     // Setup Restify Server
     var server = restify.createServer();
     server.listen(process.env.port || process.env.PORT || 4000, function () {
