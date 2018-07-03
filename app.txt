@@ -4,9 +4,10 @@ A simple OAuthCard bot for the Microsoft Bot Framework.
 
 var builder = require('botbuilder');
 var botbuilder_azure = require("botbuilder-azure");
+// var https = require('https');
 
 // Graph API SDK for Node
-var MicrosoftGraph = require("@microsoft/microsoft-graph-client");
+// var MicrosoftGraph = require("@microsoft/microsoft-graph-client");
 
 var useEmulator = (process.env.NODE_ENV == 'development');
 var useEmulator = false;
@@ -19,8 +20,6 @@ var connector = useEmulator ? new builder.ChatConnector() : new botbuilder_azure
     appPassword: process.env["MicrosoftAppPassword"] || "", // <-- Secret from Application Settings
     openIdMetadata: process.env['BotOpenIdMetadata']
 });
-
-
 
 var connectionName = process.env.CONNECTION_NAME || "NodeOAuthNGraphAAD";
 var userEmail;
@@ -35,7 +34,6 @@ var bot = new builder.UniversalBot(connector, function (session) {
         connector.signOutUser(session.message.address, connectionName,  (err, result) => {
             if (!err) {
                 session.send('You are signed out.');
-                session.userData.activeSignIn = false;
             } else {
                 session.send('There was a problem signing you out.');                
             }
@@ -72,11 +70,10 @@ var bot = new builder.UniversalBot(connector, function (session) {
 
                 // session.send('You are already signed in with token: ' + result.token);
             } else {
-                 // If there not is already a token, the bot can send an OAuthCard to have the user log in
-                 if (!session.userData.activeSignIn) {
+                // If there not is already a token, the bot can send an OAuthCard to have the user log in
+                if (!session.userData.activeSignIn) {
                     session.send("Hello! Let's get you signed in!");
-
-                    builder.OAuthCard.create(connector, session, connectionName, "Please sign in", "sign in", (createSignInErr, signInMessage) =>
+                    builder.OAuthCard.create(connector, session, connectionName, "Please sign in", "Sign in", (createSignInErr, signInMessage) =>
                     {
                         if (signInMessage) {
                             session.send(signInMessage);
