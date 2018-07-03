@@ -4,6 +4,7 @@ A simple OAuthCard bot for the Microsoft Bot Framework.
 
 var builder = require('botbuilder');
 var botbuilder_azure = require("botbuilder-azure");
+var crypto = require('crypto');
 
 // Graph API SDK for Node
 var MicrosoftGraph = require("@microsoft/microsoft-graph-client");
