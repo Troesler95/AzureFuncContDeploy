@@ -9,7 +9,7 @@ var botbuilder_azure = require("botbuilder-azure");
 var MicrosoftGraph = require("@microsoft/microsoft-graph-client");
 
 var useEmulator = (process.env.NODE_ENV == 'development');
-var useEmulator = true;
+var useEmulator = false;
 // setting up internal storage. Do not use in-proc storage for production!!!
 var inMemoryStorage = new builder.MemoryBotStorage();
 
@@ -133,12 +133,12 @@ connector.onInvoke((event, cb) => {
 if(useEmulator) {
     // var restify = require('restify');
     // Setup Restify Server
-    var server = restify.createServer();
-    server.listen(process.env.port || process.env.PORT || 4000, function () {
-        console.log('%s listening to %s', server.name, server.url); 
-    });
-    // Listen for messages from users 
-    server.post('/api/messages', connector.listen());
+    // var server = restify.createServer();
+    // server.listen(process.env.port || process.env.PORT || 4000, function () {
+    //     console.log('%s listening to %s', server.name, server.url); 
+    // });
+    // // Listen for messages from users 
+    // server.post('/api/messages', connector.listen());
 } else {
     module.exports = connector.listen()
 }
